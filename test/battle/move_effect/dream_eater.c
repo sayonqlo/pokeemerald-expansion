@@ -3,7 +3,7 @@
 
 ASSUMPTIONS
 {
-    ASSUME(gBattleMoves[MOVE_DREAM_EATER].effect == EFFECT_DREAM_EATER);
+    ASSUME(gMovesInfo[MOVE_DREAM_EATER].effect == EFFECT_DREAM_EATER);
 }
 
 SINGLE_BATTLE_TEST("Dream Eater recovers 50% of the damage dealt")
@@ -47,8 +47,10 @@ SINGLE_BATTLE_TEST("Dream Eater fails if Heal Block applies")
         TURN { MOVE(opponent, MOVE_HEAL_BLOCK); MOVE(player, MOVE_DREAM_EATER); }
     } SCENE {
         MESSAGE("Wobbuffet was prevented from healing!");
-        NOT ANIMATION(ANIM_TYPE_MOVE, MOVE_DREAM_EATER, player);
-        NOT HP_BAR(opponent);
-        NOT HP_BAR(player);
+        NONE_OF {
+            ANIMATION(ANIM_TYPE_MOVE, MOVE_DREAM_EATER, player);
+            HP_BAR(opponent);
+            HP_BAR(player);
+        }
     }
 }

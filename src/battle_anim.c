@@ -216,7 +216,7 @@ void DoMoveAnim(u16 move)
     // Make sure the anim target of moves hitting everyone is at the opposite side.
     if (GetBattlerMoveTargetType(gBattlerAttacker, move) & MOVE_TARGET_FOES_AND_ALLY && IsDoubleBattle())
     {
-        while (GET_BATTLER_SIDE(gBattleAnimAttacker) == GET_BATTLER_SIDE(gBattleAnimTarget))
+        while (GetBattlerSide(gBattleAnimAttacker) == GetBattlerSide(gBattleAnimTarget))
         {
             if (++gBattleAnimTarget >= MAX_BATTLERS_COUNT)
                 gBattleAnimTarget = 0;
@@ -237,7 +237,9 @@ void LaunchBattleAnimation(u32 animType, u32 animId)
     if (gTestRunnerEnabled)
     {
         TestRunner_Battle_RecordAnimation(animType, animId);
-        if (gTestRunnerHeadless)
+        // Play Transform and Ally Switch even in Headless as these move animations also change mon data.
+        if (gTestRunnerHeadless
+            && !(animType == ANIM_TYPE_MOVE && (animId == MOVE_TRANSFORM || animId == MOVE_ALLY_SWITCH)))
         {
             gAnimScriptCallback = Nop;
             gAnimScriptActive = FALSE;
@@ -248,6 +250,7 @@ void LaunchBattleAnimation(u32 animType, u32 animId)
     switch (animType)
     {
     case ANIM_TYPE_GENERAL:
+    default:
         animsTable = gBattleAnims_General;
         break;
     case ANIM_TYPE_MOVE:
@@ -275,7 +278,11 @@ void LaunchBattleAnimation(u32 animType, u32 animId)
         case B_ANIM_WISH_HEAL:
         case B_ANIM_MEGA_EVOLUTION:
         case B_ANIM_PRIMAL_REVERSION:
+        case B_ANIM_ULTRA_BURST:
         case B_ANIM_GULP_MISSILE:
+        case B_ANIM_RAINBOW:
+        case B_ANIM_SEA_OF_FIRE:
+        case B_ANIM_SWAMP:
             sAnimHideHpBoxes = TRUE;
             break;
         default:
@@ -434,31 +441,45 @@ static void Cmd_unloadspritegfx(void)
 
 static u8 GetBattleAnimMoveTargets(u8 battlerArgIndex, u8 *targets)
 {
-    u8 numTargets = 1;
-    switch (GetBattlerMoveTargetType(gBattleAnimAttacker, gAnimMoveIndex))
+    u8 numTargets = 0;
+    u32 battlerAnimId = gBattleAnimArgs[battlerArgIndex];   // ANIM_xx input
+    u32 i;
+    u32 ignoredTgt = gBattlerAttacker;
+    u32 target = GetBattlerMoveTargetType(gBattleAnimAttacker, gAnimMoveIndex);
+    
+    switch (battlerAnimId)
     {
-    case MOVE_TARGET_BOTH:
-        targets[0] = gBattleAnimArgs[battlerArgIndex];
-        numTargets = 1;
-        if (IsBattlerAlive(BATTLE_PARTNER(targets[0])))
+    case ANIM_ATTACKER:
+    case ANIM_ATK_PARTNER:
+        ignoredTgt = gBattlerTarget;
+        break;
+    case ANIM_TARGET:
+    case ANIM_DEF_PARTNER:
+        ignoredTgt = gBattlerAttacker;
+        break;
+    }
+    
+    switch (target)
+    {
+    case MOVE_TARGET_FOES_AND_ALLY:
+        if (battlerAnimId == ANIM_ATTACKER)
         {
-            targets[1] = BATTLE_PARTNER(targets[0]);
-            numTargets = 2;
+            targets[numTargets++] = gBattleAnimAttacker;
+        }
+        else
+        {
+            for (i = 0; i < gBattlersCount; i++)
+            {
+                if (i != gBattleAnimAttacker && IS_ALIVE_AND_PRESENT(i))
+                    targets[numTargets++] = i + MAX_BATTLERS_COUNT; // anim ids for battler ids
+            }
         }
         break;
-    case MOVE_TARGET_FOES_AND_ALLY:
-        targets[0] = gBattleAnimArgs[battlerArgIndex];
-        numTargets = 1;
-        if (IsBattlerAlive(BATTLE_PARTNER(targets[0])))
+    case MOVE_TARGET_BOTH: // all opponents
+        for (i = 0; i < gBattlersCount; i++)
         {
-            targets[1] = BATTLE_PARTNER(targets[0]);
-            numTargets++;
-        }
-
-        if (IsBattlerAlive(BATTLE_PARTNER(BATTLE_OPPOSITE(targets[0]))))
-        {
-            targets[2] = BATTLE_PARTNER(BATTLE_OPPOSITE(targets[0]));
-            numTargets++;
+            if (i != ignoredTgt && !IsAlly(i, ignoredTgt) && IS_ALIVE_AND_PRESENT(i))
+                targets[numTargets++] = i + MAX_BATTLERS_COUNT;
         }
         break;
     default:
@@ -536,7 +557,7 @@ static void Cmd_createsprite(void)
 
 static void CreateSpriteOnTargets(const struct SpriteTemplate *template, u8 argVar, u8 battlerArgIndex, u8 argsCount, bool32 overwriteAnimTgt)
 {
-    u32 i;
+    u32 i, battler;
     u8 targets[MAX_BATTLERS_COUNT];
     int ntargets;
     s16 subpriority;
@@ -550,15 +571,18 @@ static void CreateSpriteOnTargets(const struct SpriteTemplate *template, u8 argV
     subpriority = GetSubpriorityForMoveAnim(argVar);
 
     ntargets = GetBattleAnimMoveTargets(battlerArgIndex, targets);
+    if (ntargets == 0)
+        return;
 
-    for (i = 0; i < ntargets; i++) {
-
+    for (i = 0; i < ntargets; i++)
+    {
+        battler = GetAnimBattlerId(targets[i]);
         if (overwriteAnimTgt)
             gBattleAnimArgs[battlerArgIndex] = targets[i];
 
         if (CreateSpriteAndAnimate(template,
-            GetBattlerSpriteCoord(targets[i], BATTLER_COORD_X_2),
-            GetBattlerSpriteCoord(targets[i], BATTLER_COORD_Y_PIC_OFFSET),
+            GetBattlerSpriteCoord(battler, BATTLER_COORD_X_2),
+            GetBattlerSpriteCoord(battler, BATTLER_COORD_Y_PIC_OFFSET),
             subpriority) != MAX_SPRITES) // Don't increment the task count if the sprite couldn't be created(i.e. there are too many created sprites atm).
         {
             gAnimVisualTaskCount++;
@@ -669,12 +693,15 @@ static void Cmd_createvisualtaskontargets(void)
     sBattleAnimScriptPtr++;
 
     // copy task arguments
-    for (i = 0; i < numArgs; i++) {
+    for (i = 0; i < numArgs; i++)
+    {
         gBattleAnimArgs[i] = T1_READ_16(sBattleAnimScriptPtr);
         sBattleAnimScriptPtr += 2;
     }
 
     numArgs = GetBattleAnimMoveTargets(battlerArgIndex, targets);
+    if (numArgs == 0)
+        return;
 
     for (i = 0; i < numArgs; i++)
     {
@@ -894,14 +921,20 @@ static void Cmd_monbg(void)
 
 u8 GetAnimBattlerId(u8 wantedBattler)
 {
-    if (wantedBattler == ANIM_ATTACKER)
+    switch (wantedBattler)
+    {
+    case ANIM_ATTACKER:
+    default:
         return gBattleAnimAttacker;
-    else if (wantedBattler == ANIM_TARGET)
+    case ANIM_TARGET:
         return gBattleAnimTarget;
-    else if (wantedBattler == ANIM_ATK_PARTNER)
+    case ANIM_ATK_PARTNER:
         return BATTLE_PARTNER(gBattleAnimAttacker);
-    else
+    case ANIM_DEF_PARTNER:
         return BATTLE_PARTNER(gBattleAnimTarget);
+    case ANIM_PLAYER_LEFT ... ANIM_OPPONENT_RIGHT:
+        return wantedBattler - MAX_BATTLERS_COUNT;
+    }
 }
 
 bool8 IsBattlerSpriteVisible(u8 battlerId)
@@ -1468,10 +1501,8 @@ static void LoadDefaultBg(void)
 {
     if (IsContest())
         LoadContestBgAfterMoveAnim();
-#if B_TERRAIN_BG_CHANGE == TRUE
-    else if (gFieldStatuses & STATUS_FIELD_TERRAIN_ANY)
+    else if (B_TERRAIN_BG_CHANGE == TRUE && gFieldStatuses & STATUS_FIELD_TERRAIN_ANY)
         DrawTerrainTypeBattleBackground();
-#endif
     else
         DrawMainBattleBackground();
 }

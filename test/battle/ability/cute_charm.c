@@ -7,24 +7,26 @@ SINGLE_BATTLE_TEST("Cute Charm inflicts infatuation on contact")
     PARAMETRIZE { move = MOVE_TACKLE; }
     PARAMETRIZE { move = MOVE_SWIFT; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_TACKLE].flags & FLAG_MAKES_CONTACT);
-        ASSUME(!(gBattleMoves[MOVE_SWIFT].flags & FLAG_MAKES_CONTACT));
+        ASSUME(gMovesInfo[MOVE_TACKLE].makesContact);
+        ASSUME(!gMovesInfo[MOVE_SWIFT].makesContact);
         PLAYER(SPECIES_WOBBUFFET) { Gender(MON_MALE); }
         OPPONENT(SPECIES_CLEFAIRY) { Gender(MON_FEMALE); Ability(ABILITY_CUTE_CHARM); }
     } WHEN {
         TURN { MOVE(player, move); }
         TURN { MOVE(player, move); }
     } SCENE {
-        if (gBattleMoves[move].flags & FLAG_MAKES_CONTACT) {
+        if (gMovesInfo[move].makesContact) {
             ABILITY_POPUP(opponent, ABILITY_CUTE_CHARM);
             ANIMATION(ANIM_TYPE_STATUS, B_ANIM_STATUS_INFATUATION, player);
             MESSAGE("Foe Clefairy's Cute Charm infatuated Wobbuffet!");
             MESSAGE("Wobbuffet is in love with Foe Clefairy!");
         } else {
-            NOT ABILITY_POPUP(opponent, ABILITY_CUTE_CHARM);
-            NOT ANIMATION(ANIM_TYPE_STATUS, B_ANIM_STATUS_INFATUATION, player);
-            NOT MESSAGE("Foe Clefairy's Cute Charm infatuated Wobbuffet!");
-            NOT MESSAGE("Wobbuffet is in love with Foe Clefairy!");
+            NONE_OF {
+                ABILITY_POPUP(opponent, ABILITY_CUTE_CHARM);
+                ANIMATION(ANIM_TYPE_STATUS, B_ANIM_STATUS_INFATUATION, player);
+                MESSAGE("Foe Clefairy's Cute Charm infatuated Wobbuffet!");
+                MESSAGE("Wobbuffet is in love with Foe Clefairy!");
+            }
         }
     }
 }

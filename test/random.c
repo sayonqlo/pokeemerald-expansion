@@ -2,6 +2,47 @@
 #include "test/test.h"
 #include "random.h"
 
+// We expect each element to have an indexSum of 3.5 * 1024.
+// Therefore the maximum error is 8*3584, or 28672.
+#define SHUFFLE_TEST_IMPL \
+    u32 i, j, error; \
+    u16 indexSum[8]; \
+    memset(indexSum, 0, sizeof(indexSum)); \
+    for (i = 0; i < 1024; i++) \
+    { \
+        Shuffle(array, ARRAY_COUNT(array), sizeof(array[0])); \
+        for (j = 0; j < ARRAY_COUNT(array); j++) \
+            indexSum[array[j]] += j; \
+    } \
+    error = 0; \
+    for (i = 0; i < ARRAY_COUNT(indexSum); i++) \
+        error += abs(3584 - indexSum[i]); \
+    EXPECT_LT(error, (int)(28672 * 0.03));
+
+TEST("Shuffle randomizes the array [Shuffle8]")
+{
+    u8 array[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    SHUFFLE_TEST_IMPL;
+}
+
+TEST("Shuffle randomizes the array [Shuffle16]")
+{
+    u16 array[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    SHUFFLE_TEST_IMPL;
+}
+
+TEST("Shuffle randomizes the array [Shuffle32]")
+{
+    u32 array[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    SHUFFLE_TEST_IMPL;
+}
+
+TEST("Shuffle randomizes the array [Shuffle64]")
+{
+    u64 array[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    SHUFFLE_TEST_IMPL;
+}
+
 TEST("RandomUniform generates lo..hi")
 {
     u32 lo, hi, i;
@@ -152,3 +193,97 @@ TEST("RandomElement generates a uniform distribution")
 
     EXPECT_LT(error, UQ_4_12(0.025));
 }
+
+TEST("RandomUniform mul-based faster than mod-based (compile-time)")
+{
+    #if HQ_RANDOM == TRUE
+        const u32 expectedMulSum = 6;
+        const u32 expectedModSum = 4;
+    #else
+        const u32 expectedMulSum = 3;
+        const u32 expectedModSum = 4;
+    #endif
+    struct Benchmark mulBenchmark, modBenchmark;
+    u32 mulSum = 0, modSum = 0;
+
+    BENCHMARK(&mulBenchmark)
+    {
+        mulSum += RandomUniformDefault(RNG_NONE, 0, 1);
+        mulSum += RandomUniformDefault(RNG_NONE, 0, 2);
+        mulSum += RandomUniformDefault(RNG_NONE, 0, 3);
+        mulSum += RandomUniformDefault(RNG_NONE, 0, 4);
+    }
+
+    BENCHMARK(&modBenchmark)
+    {
+        modSum += Random() % 2;
+        modSum += Random() % 3;
+        modSum += Random() % 4;
+        modSum += Random() % 5;
+    }
+
+    EXPECT_FASTER(mulBenchmark, modBenchmark);
+
+    // Reference mulSum/modSum to prevent optimization.
+    // These numbers are different because multiplication and modulus
+    // have subtly different biases (so subtle that it's irrelevant for
+    // our purposes).
+    EXPECT_EQ(mulSum, expectedMulSum);
+    EXPECT_EQ(modSum, expectedModSum);
+}
+
+TEST("RandomUniform mul-based faster than mod-based (run-time)")
+{
+    #if HQ_RANDOM == TRUE
+        const u32 expectedMulSum = 289;
+        const u32 expectedModSum = 205;
+    #else
+        const u32 expectedMulSum = 232;
+        const u32 expectedModSum = 249;
+    #endif
+    u32 i;
+    struct Benchmark mulBenchmark, modBenchmark;
+    u32 mulSum = 0, modSum = 0;
+
+    BENCHMARK(&mulBenchmark)
+    {
+        for (i = 0; i < 32; i++)
+            mulSum += RandomUniformDefault(RNG_NONE, 0, i);
+    }
+
+    BENCHMARK(&modBenchmark)
+    {
+        for (i = 0; i < 32; i++)
+            modSum += Random() % (i + 1);
+    }
+
+    EXPECT_FASTER(mulBenchmark, modBenchmark);
+
+    // Reference mulSum/modSum to prevent optimization.
+    EXPECT_EQ(mulSum, expectedMulSum);
+    EXPECT_EQ(modSum, expectedModSum);
+}
+
+#if HQ_RANDOM == TRUE
+TEST("Thumb and C SFC32 implementations produce the same results")
+{
+    u32 thumbSum;
+    u32 cSum;
+    int i;
+    rng_value_t localState;
+
+    thumbSum = 0;
+    cSum = 0;
+
+    SeedRng(0);
+    localState = gRngValue;
+
+    for(i = 0; i < 32; i++)
+    {
+        thumbSum += Random32();
+        cSum += _SFC32_Next(&localState);
+    }
+
+    EXPECT_EQ(thumbSum, cSum);
+}
+#endif

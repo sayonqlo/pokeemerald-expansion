@@ -13,7 +13,7 @@
 
 ASSUMPTIONS
 {
-    ASSUME(gBattleMoves[MOVE_REVIVAL_BLESSING].effect == EFFECT_REVIVAL_BLESSING);
+    ASSUME(gMovesInfo[MOVE_REVIVAL_BLESSING].effect == EFFECT_REVIVAL_BLESSING);
 }
 
 SINGLE_BATTLE_TEST("Revival Blessing revives a chosen fainted party member for the player")
@@ -103,7 +103,7 @@ TO_DO_BATTLE_TEST("Revived battlers still lose their turn");
 //         OPPONENT(SPECIES_WYNAUT) { HP(1); }
 //     } WHEN {
 //         TURN { MOVE(playerLeft, MOVE_TACKLE, target: opponentRight);
-//                MOVE(opponentLeft, MOVE_REVIVAL_BLESSING); 
+//                MOVE(opponentLeft, MOVE_REVIVAL_BLESSING);
 //                SEND_OUT(opponentLeft, 1); }
 //     } SCENE {
 //         MESSAGE("Wobbuffet used Tackle!");

@@ -3,10 +3,10 @@
 
 ASSUMPTIONS
 {
-    ASSUME(gBattleMoves[MOVE_TACKLE].split == SPLIT_PHYSICAL);
+    ASSUME(gMovesInfo[MOVE_TACKLE].category == DAMAGE_CATEGORY_PHYSICAL);
 }
 
-SINGLE_BATTLE_TEST("Contrary raises Attack when Intimidated", s16 damage)
+SINGLE_BATTLE_TEST("Contrary raises Attack when Intimidated in a single battle", s16 damage)
 {
     u32 ability;
     PARAMETRIZE { ability = ABILITY_CONTRARY; }
@@ -26,7 +26,53 @@ SINGLE_BATTLE_TEST("Contrary raises Attack when Intimidated", s16 damage)
         HP_BAR(player, captureDamage: &results[i].damage);
     }
     FINALLY {
-        EXPECT_MUL_EQ(results[1].damage, Q_4_12(2.125), results[0].damage);
+        EXPECT_MUL_EQ(results[1].damage, Q_4_12(2.25), results[0].damage);
+    }
+}
+
+DOUBLE_BATTLE_TEST("Contrary raises Attack when Intimidated in a double battle", s16 damageLeft, s16 damageRight)
+{
+    u32 abilityLeft, abilityRight;
+
+    PARAMETRIZE { abilityLeft = ABILITY_CONTRARY; abilityRight = ABILITY_CONTRARY; }
+    PARAMETRIZE { abilityLeft = ABILITY_TANGLED_FEET; abilityRight = ABILITY_TANGLED_FEET; }
+    PARAMETRIZE { abilityLeft = ABILITY_CONTRARY; abilityRight = ABILITY_TANGLED_FEET; }
+    PARAMETRIZE { abilityLeft = ABILITY_TANGLED_FEET; abilityRight = ABILITY_CONTRARY; }
+
+    GIVEN {
+        PLAYER(SPECIES_MIGHTYENA) { Ability(ABILITY_INTIMIDATE); }
+        PLAYER(SPECIES_WOBBUFFET);
+        OPPONENT(SPECIES_SPINDA) { Ability(abilityLeft); }
+        OPPONENT(SPECIES_SPINDA) { Ability(abilityRight); }
+    } WHEN {
+        TURN { MOVE(opponentLeft, MOVE_TACKLE, target: playerLeft); MOVE(opponentRight, MOVE_TACKLE, target: playerRight); }
+    } SCENE {
+        ABILITY_POPUP(playerLeft, ABILITY_INTIMIDATE);
+        if (abilityLeft == ABILITY_CONTRARY) {
+            ABILITY_POPUP(opponentLeft, ABILITY_CONTRARY);
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponentLeft);
+            MESSAGE("Foe Spinda's Attack rose!");
+        } else {
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponentLeft);
+            MESSAGE("Mightyena's Intimidate cuts Foe Spinda's attack!");
+        }
+        if (abilityRight == ABILITY_CONTRARY) {
+            ABILITY_POPUP(opponentRight, ABILITY_CONTRARY);
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponentRight);
+            MESSAGE("Foe Spinda's Attack rose!");
+        } else {
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponentRight);
+            MESSAGE("Mightyena's Intimidate cuts Foe Spinda's attack!");
+        }
+        HP_BAR(playerLeft, captureDamage: &results[i].damageLeft);
+        HP_BAR(playerRight, captureDamage: &results[i].damageRight);
+    } THEN {
+        EXPECT_EQ(opponentLeft->statStages[STAT_ATK],  (abilityLeft == ABILITY_CONTRARY)  ? DEFAULT_STAT_STAGE+1 : DEFAULT_STAT_STAGE-1);
+        EXPECT_EQ(opponentRight->statStages[STAT_ATK], (abilityRight == ABILITY_CONTRARY) ? DEFAULT_STAT_STAGE+1 : DEFAULT_STAT_STAGE-1);
+    }
+    FINALLY {
+        EXPECT_MUL_EQ(results[1].damageLeft, Q_4_12(2.25), results[0].damageLeft);
+        EXPECT_MUL_EQ(results[1].damageRight, Q_4_12(2.25), results[0].damageRight);
     }
 }
 
@@ -36,8 +82,8 @@ SINGLE_BATTLE_TEST("Contrary raises stats after using a move which would normall
     PARAMETRIZE { ability = ABILITY_CONTRARY; }
     PARAMETRIZE { ability = ABILITY_TANGLED_FEET; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_OVERHEAT].effect == EFFECT_OVERHEAT);
-        ASSUME(gBattleMoves[MOVE_OVERHEAT].split == SPLIT_SPECIAL);
+        ASSUME(MoveHasAdditionalEffectSelf(MOVE_OVERHEAT, MOVE_EFFECT_SP_ATK_TWO_DOWN) == TRUE);
+        ASSUME(gMovesInfo[MOVE_OVERHEAT].category == DAMAGE_CATEGORY_SPECIAL);
         PLAYER(SPECIES_WOBBUFFET);
         OPPONENT(SPECIES_SPINDA) { Ability(ability); }
     } WHEN {
@@ -80,7 +126,7 @@ SINGLE_BATTLE_TEST("Contrary lowers a stat after using a move which would normal
     PARAMETRIZE { ability = ABILITY_CONTRARY; }
     PARAMETRIZE { ability = ABILITY_TANGLED_FEET; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_SWORDS_DANCE].effect == EFFECT_ATTACK_UP_2);
+        ASSUME(gMovesInfo[MOVE_SWORDS_DANCE].effect == EFFECT_ATTACK_UP_2);
         PLAYER(SPECIES_WOBBUFFET) { Defense(102); }
         OPPONENT(SPECIES_SPINDA) { Ability(ability); Attack(100); }
     } WHEN {
@@ -117,7 +163,7 @@ SINGLE_BATTLE_TEST("Contrary raises a stat after using a move which would normal
     PARAMETRIZE { ability = ABILITY_CONTRARY; }
     PARAMETRIZE { ability = ABILITY_TANGLED_FEET; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_GROWL].effect == EFFECT_ATTACK_DOWN);
+        ASSUME(gMovesInfo[MOVE_GROWL].effect == EFFECT_ATTACK_DOWN);
         PLAYER(SPECIES_WOBBUFFET) { Speed(3); }
         OPPONENT(SPECIES_SPINDA) { Ability(ability); Speed(2); }
     } WHEN {
@@ -139,5 +185,39 @@ SINGLE_BATTLE_TEST("Contrary raises a stat after using a move which would normal
     }
     FINALLY {
         EXPECT_MUL_EQ(results[1].damage, Q_4_12(2.125), results[0].damage);
+    }
+}
+
+SINGLE_BATTLE_TEST("Contrary lowers a stat after using a move which would normally raise it: Belly Drum", s16 damageBefore, s16 damageAfter)
+{
+    u32 ability;
+    PARAMETRIZE { ability = ABILITY_CONTRARY; }
+    PARAMETRIZE { ability = ABILITY_TANGLED_FEET; }
+    GIVEN {
+        ASSUME(gMovesInfo[MOVE_BELLY_DRUM].effect == EFFECT_BELLY_DRUM);
+        PLAYER(SPECIES_WOBBUFFET);
+        OPPONENT(SPECIES_SPINDA) { Ability(ability); }
+    } WHEN {
+        TURN { MOVE(opponent, MOVE_TACKLE); }
+        TURN { MOVE(opponent, MOVE_BELLY_DRUM); }
+        TURN { MOVE(opponent, MOVE_TACKLE); }
+    } SCENE {
+        MESSAGE("Foe Spinda used Tackle!");
+        HP_BAR(player, captureDamage: &results[i].damageBefore);
+
+        if (ability == ABILITY_CONTRARY) {
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponent);
+            MESSAGE("Foe Spinda cut its own HP and maximized ATTACK!"); //Message stays the same
+        }
+        else {
+            ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponent);
+            MESSAGE("Foe Spinda cut its own HP and maximized ATTACK!");
+        }
+
+        HP_BAR(player, captureDamage: &results[i].damageAfter);
+    }
+    FINALLY {
+        EXPECT_MUL_EQ(results[0].damageBefore, UQ_4_12(0.25), results[0].damageAfter);
+        EXPECT_MUL_EQ(results[1].damageBefore, UQ_4_12(4.0), results[1].damageAfter);
     }
 }
