@@ -177,7 +177,7 @@ NewBirchsLab_EventScript_Mudkip::
 	return
 
 NewBirchsLab_EventScript_Mudkip_1:
-	givemon SPECIES_MUDKIP, 50, ITEM_MASTER_BALL
+	givemon SPECIES_MUDKIP, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Mudkip_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -213,7 +213,7 @@ NewBirchsLab_EventScript_Totodile::
 	return
 
 NewBirchsLab_EventScript_Totodile_1:
-	givemon SPECIES_TOTODILE, 50, ITEM_MASTER_BALL
+	givemon SPECIES_TOTODILE, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Totodile_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -249,7 +249,7 @@ NewBirchsLab_EventScript_Squirtle::
 	return
 
 NewBirchsLab_EventScript_Squirtle_1:
-	givemon SPECIES_SQUIRTLE, 50, ITEM_MASTER_BALL
+	givemon SPECIES_SQUIRTLE, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Squirtle_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -285,7 +285,7 @@ NewBirchsLab_EventScript_Treecko::
 	return
 
 NewBirchsLab_EventScript_Treecko_1:
-	givemon SPECIES_TREECKO, 50, ITEM_MASTER_BALL
+	givemon SPECIES_TREECKO, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Treecko_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -321,7 +321,7 @@ NewBirchsLab_EventScript_Chikorita::
 	return
 
 NewBirchsLab_EventScript_Chikorita_1:
-	givemon SPECIES_CHIKORITA, 50, ITEM_MASTER_BALL
+	givemon SPECIES_CHIKORITA, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Chikorita_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -357,7 +357,7 @@ NewBirchsLab_EventScript_Bulbasaur::
 	return
 
 NewBirchsLab_EventScript_Bulbasaur_1:
-	givemon SPECIES_BULBASAUR, 50, ITEM_MASTER_BALL
+	givemon SPECIES_BULBASAUR, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Bulbasaur_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -393,7 +393,7 @@ NewBirchsLab_EventScript_Torchic::
 	return
 
 NewBirchsLab_EventScript_Torchic_1:
-	givemon SPECIES_TORCHIC, 50, ITEM_MASTER_BALL
+	givemon SPECIES_TORCHIC, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Torchic_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -429,7 +429,7 @@ NewBirchsLab_EventScript_Cyndaquil::
 	return
 
 NewBirchsLab_EventScript_Cyndaquil_1:
-	givemon SPECIES_CYNDAQUIL, 50, ITEM_MASTER_BALL
+	givemon SPECIES_CYNDAQUIL, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Cyndaquil_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
@@ -465,7 +465,7 @@ NewBirchsLab_EventScript_Charmander::
 	return
 
 NewBirchsLab_EventScript_Charmander_1:
-	givemon SPECIES_CHARMANDER, 50, ITEM_MASTER_BALL
+	givemon SPECIES_CHARMANDER, 5, ITEM_MASTER_BALL
 	compare VAR_RESULT, MON_GIVEN_TO_PARTY
 	goto_if_eq NewBirchsLab_EventScript_Charmander_4
 	compare VAR_RESULT, MON_GIVEN_TO_PC
